@@ -3,6 +3,9 @@
 
 #ifdef MODULE_C3  // BootButton
     #define BOOT_BUTTON 9 // ESP-C3 SuperMini
+    #define BOARD_LED   8
+    #define LED_ON      LOW
+    #define LED_OFF     HIGH
 #endif
 
 #ifndef MODULE_C3 // wenn c3 dann kein MRD
@@ -99,6 +102,7 @@ void   UpdateSwitches();
 void   SetDemoMode (bool Mode);
 void   SetSleepMode(bool Mode);
 void   SetDebugMode(bool Mode);
+void   SaveModule();
 
 void   AddStatus(String Msg);
 
@@ -223,7 +227,9 @@ void SendMessage ()
 {
     //sendet NAME0:Value0, NAME1:Value1... Status:(bitwise)int
     TSLed = millis();
-    //digitalWrite(LED_BUILTIN, LED_ON);
+    digitalWrite(BOARD_LED, LED_ON);
+    Serial.println("LED on");
+            
 
     JsonDocument doc;; String jsondata; 
     char buf[100]; 
@@ -314,7 +320,7 @@ void SendPairingRequest()
 {
   // sendet auf Broadcast: "addme", T0:Type, N0:Name, T1:Type, N1:Name...
   TSLed = millis();
-  //digitalWrite(LED_BUILTIN, LED_ON);
+  digitalWrite(BOARD_LED, LED_ON);
   
   JsonDocument doc;; String jsondata; 
   char Buf[100] = {};
@@ -367,26 +373,29 @@ void SendNameChange(int Pos)
 }
 #pragma endregion Send-Things
 #pragma region System-Things
+void SaveModule2()
+{
+    preferences.begin("JeepifyInit", false);
+      String ToSave = (String) Module.Export();
+
+      preferences.putString("Module", ToSave);
+      Serial.printf("Exportiere Modul: %s", ToSave.c_str());
+  preferences.end();
+}
 void SetDemoMode(bool Mode) 
 {
-  preferences.begin("JeepifyInit", false);
     Module.SetDemoMode(Mode);
-    if (preferences.getBool("DemoMode", false) != Module.GetDemoMode()) preferences.putBool("DemoMode", Module.GetDemoMode());
-  preferences.end();
+    SaveModule();
 }
 void SetSleepMode(bool Mode) 
 {
-  preferences.begin("JeepifyInit", false);
     Module.SetSleepMode(Mode);
-    if (preferences.getBool("SleepMode", false) != Module.GetSleepMode()) preferences.putBool("SleepMode", Module.GetSleepMode());
-  preferences.end();
+    SaveModule();
 }
 void SetDebugMode(bool Mode) 
 {
-  preferences.begin("JeepifyInit", false);
     Module.SetDebugMode(Mode);
-    if (preferences.getBool("DebugMode", false) != Module.GetDebugMode()) preferences.putBool("DebugMode", Module.GetDebugMode());
-  preferences.end();
+    SaveModule();
 }
 void AddStatus(String Msg) 
 {
@@ -458,12 +467,11 @@ void  GoToSleep() {
   Serial.print("Going to sleep at: "); Serial.println(millis());
   Serial.print("LastContact    at: "); Serial.println(Module.GetLastContact());
   
-  gpio_deep_sleep_hold_en();
+  //gpio_deep_sleep_hold_en();
   for (int SNr=0; SNr<MAX_PERIPHERALS; SNr++) if (Module.GetPeriphType(SNr) == SENS_TYPE_SWITCH) gpio_hold_en((gpio_num_t)Module.GetPeriphIOPort(SNr));  
   
   esp_sleep_enable_timer_wakeup(SLEEP_INTERVAL * 1000);
   esp_deep_sleep_start();
-
 }
 void SaveModule()
 {
@@ -794,6 +802,8 @@ void setup()
 {
     Serial.begin(115200);
 
+    pinMode(BOARD_LED, OUTPUT);
+    
     #ifndef MODULE_C3 //MRD
         mrd = new MultiResetDetector(MRD_TIMEOUT, MRD_ADDRESS);
 
@@ -844,7 +854,8 @@ void setup()
     WiFi.macAddress(MacTemp);
     Module.SetBroadcastAddress(MacTemp);
 
-    if (esp_now_init() != ESP_OK) { Serial.println("Error initializing ESP-NOW"); }
+    //if (esp_now_init() != ESP_OK) { Serial.println("Error initializing ESP-NOW"); }
+    if (esp_now_init() != 0) { Serial.println("Error initializing ESP-NOW"); }
   
     esp_now_register_send_cb(OnDataSent);
     esp_now_register_recv_cb(OnDataRecv);    
@@ -865,6 +876,17 @@ void setup()
   
     Module.SetLastContact(millis());
     
+    #ifdef ESP32
+        for (int SNr=0; SNr<MAX_PERIPHERALS; SNr++) 
+        {
+            if (Module.GetPeriphType(SNr) == SENS_TYPE_SWITCH) 
+            {
+                ((gpio_num_t)Module.GetPeriphIOPort(SNr));  
+            }
+        }
+        gpio_deep_sleep_hold_dis(); 
+    #endif 
+
     /*
     for (int SNr=0; SNr<MAX_PERIPHERALS; SNr++) if (Module.GetPeriphType(SNr) == SENS_TYPE_SWITCH) 
     {
@@ -881,7 +903,35 @@ void loop()
     if  ((millis() - TSTouch) > 100) 
     {
         TSTouch = millis();
-
+        
+        int Diff = millis() - Module.GetLastContact();
+        //Serial.printf("Sleepdiff: %d\n\r", Diff);
+        if (Diff > SLEEP_INTERVAL) {
+            if (Module.GetSleepMode()) {
+                Serial.print("Going to sleep at: "); Serial.println(millis());
+                Serial.print("LastContact    at: "); Serial.println(Module.GetLastContact());
+                GoToSleep();
+            }
+        }
+        if ((TSTouch - TSLed > MSGLIGHT_INTERVAL) and (TSLed > 0))
+        {
+            Serial.println("LED off");
+            TSLed = 0;
+            digitalWrite(BOARD_LED, LED_OFF);
+        }
+        if  ((TSTouch - TSSend ) > MSG_INTERVAL  ) 
+        {
+            TSSend = millis();
+            if (Module.GetPairMode()) SendPairingRequest();
+            else SendMessage();
+        }
+        if (((TSTouch - TSPair ) > PAIR_INTERVAL ) and (Module.GetPairMode())) 
+        {
+            TSPair = 0;
+            Module.SetPairMode(false);
+            AddStatus("Pairing beendet...");
+        }
+        
         int BB = !digitalRead(BOOT_BUTTON);
       
         if (BB == 1) {
@@ -904,18 +954,5 @@ void loop()
             }
         }
         else TSBootButton = 0;
-    }
-
-    if  ((millis() - TSSend ) > MSG_INTERVAL  ) 
-    {
-        TSSend = millis();
-        if (Module.GetPairMode()) SendPairingRequest();
-        else SendMessage();
-    }
-    if (((millis() - TSPair ) > PAIR_INTERVAL ) and (Module.GetPairMode())) 
-    {
-        TSPair = 0;
-        Module.SetPairMode(false);
-        AddStatus("Pairing beendet...");
     }
 }
