@@ -274,11 +274,6 @@ void SetDemoMode(bool Mode)
     Module.SetDemoMode(Mode);
     SaveModule();
 }
-void SetDemoMode(bool Mode) 
-{
-    Module.SetDemoMode(Mode);
-    SaveModule();
-}
 void SetSleepMode(bool Mode) 
 {
     Module.SetSleepMode(Mode);
@@ -803,35 +798,6 @@ void loop()
     if  ((millis() - TSTouch) > 100) 
     {
         TSTouch = millis();
-        
-        int Diff = millis() - Module.GetLastContact();
-        //Serial.printf("Sleepdiff: %d\n\r", Diff);
-        if (Diff > SLEEP_INTERVAL) {
-            if (Module.GetSleepMode()) {
-                Serial.print("Going to sleep at: "); Serial.println(millis());
-                Serial.print("LastContact    at: "); Serial.println(Module.GetLastContact());
-                GoToSleep();
-            }
-        }
-        if ((TSTouch - TSLed > MSGLIGHT_INTERVAL) and (TSLed > 0))
-        {
-            Serial.println("LED off");
-            TSLed = 0;
-            digitalWrite(BOARD_LED, LED_OFF);
-        }
-        if  ((TSTouch - TSSend ) > MSG_INTERVAL  ) 
-        {
-            TSSend = millis();
-            if (Module.GetPairMode()) SendPairingRequest();
-            else SendMessage();
-        }
-        if (((TSTouch - TSPair ) > PAIR_INTERVAL ) and (Module.GetPairMode())) 
-        {
-            TSPair = 0;
-            Module.SetPairMode(false);
-            AddStatus("Pairing beendet...");
-        }
-        
         
         int Diff = millis() - Module.GetLastContact();
         //Serial.printf("Sleepdiff: %d\n\r", Diff);
