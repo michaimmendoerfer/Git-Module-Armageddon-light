@@ -7,6 +7,9 @@
     #define BOARD_LED   8
     #define LED_ON      LOW
     #define LED_OFF     HIGH
+    #define BOARD_LED   8
+    #define LED_ON      LOW
+    #define LED_OFF     HIGH
 #endif
 
 #ifndef MODULE_C3 // wenn c3 dann kein MRD
@@ -104,6 +107,7 @@ void   SetDemoMode (bool Mode);
 void   SetSleepMode(bool Mode);
 void   SetDebugMode(bool Mode);
 void   SaveModule();
+void   SaveModule();
 
 void   AddStatus(String Msg);
 
@@ -118,6 +122,9 @@ void SendMessage ()
 {
     //sendet NAME0:Value0, NAME1:Value1... Status:(bitwise)int
     TSLed = millis();
+    digitalWrite(BOARD_LED, LED_ON);
+    Serial.println("LED on");
+            
     digitalWrite(BOARD_LED, LED_ON);
     Serial.println("LED on");
             
@@ -212,6 +219,7 @@ void SendPairingRequest()
   // sendet auf Broadcast: "addme", T0:Type, N0:Name, T1:Type, N1:Name...
   TSLed = millis();
   digitalWrite(BOARD_LED, LED_ON);
+  digitalWrite(BOARD_LED, LED_ON);
   
   JsonDocument doc;; String jsondata; 
   char Buf[100] = {};
@@ -271,7 +279,17 @@ void SaveModule2()
 
       preferences.putString("Module", ToSave);
       Serial.printf("Exportiere Modul: %s", ToSave.c_str());
+    preferences.begin("JeepifyInit", false);
+      String ToSave = (String) Module.Export();
+
+      preferences.putString("Module", ToSave);
+      Serial.printf("Exportiere Modul: %s", ToSave.c_str());
   preferences.end();
+}
+void SetDemoMode(bool Mode) 
+{
+    Module.SetDemoMode(Mode);
+    SaveModule();
 }
 void SetDemoMode(bool Mode) 
 {
@@ -282,10 +300,12 @@ void SetSleepMode(bool Mode)
 {
     Module.SetSleepMode(Mode);
     SaveModule();
+    SaveModule();
 }
 void SetDebugMode(bool Mode) 
 {
     Module.SetDebugMode(Mode);
+    SaveModule();
     SaveModule();
 }
 void AddStatus(String Msg) 
@@ -358,6 +378,7 @@ void  GoToSleep() {
   Serial.print("Going to sleep at: "); Serial.println(millis());
   Serial.print("LastContact    at: "); Serial.println(Module.GetLastContact());
   
+  //gpio_deep_sleep_hold_en();
   //gpio_deep_sleep_hold_en();
   for (int SNr=0; SNr<MAX_PERIPHERALS; SNr++) if (Module.GetPeriphType(SNr) == SENS_TYPE_SWITCH) gpio_hold_en((gpio_num_t)Module.GetPeriphIOPort(SNr));  
   
@@ -688,6 +709,9 @@ void setup()
 
     pinMode(BOARD_LED, OUTPUT);
     
+
+    pinMode(BOARD_LED, OUTPUT);
+    
     #ifndef MODULE_C3 //MRD
         mrd = new MultiResetDetector(MRD_TIMEOUT, MRD_ADDRESS);
 
@@ -738,6 +762,8 @@ void setup()
     WiFi.macAddress(MacTemp);
     Module.SetBroadcastAddress(MacTemp);
 
+    //if (esp_now_init() != ESP_OK) { Serial.println("Error initializing ESP-NOW"); }
+    if (esp_now_init() != 0) { Serial.println("Error initializing ESP-NOW"); }
     //if (esp_now_init() != ESP_OK) { Serial.println("Error initializing ESP-NOW"); }
     if (esp_now_init() != 0) { Serial.println("Error initializing ESP-NOW"); }
   
@@ -794,6 +820,35 @@ void loop()
     if  ((millis() - TSTouch) > 100) 
     {
         TSTouch = millis();
+        
+        int Diff = millis() - Module.GetLastContact();
+        //Serial.printf("Sleepdiff: %d\n\r", Diff);
+        if (Diff > SLEEP_INTERVAL) {
+            if (Module.GetSleepMode()) {
+                Serial.print("Going to sleep at: "); Serial.println(millis());
+                Serial.print("LastContact    at: "); Serial.println(Module.GetLastContact());
+                GoToSleep();
+            }
+        }
+        if ((TSTouch - TSLed > MSGLIGHT_INTERVAL) and (TSLed > 0))
+        {
+            Serial.println("LED off");
+            TSLed = 0;
+            digitalWrite(BOARD_LED, LED_OFF);
+        }
+        if  ((TSTouch - TSSend ) > MSG_INTERVAL  ) 
+        {
+            TSSend = millis();
+            if (Module.GetPairMode()) SendPairingRequest();
+            else SendMessage();
+        }
+        if (((TSTouch - TSPair ) > PAIR_INTERVAL ) and (Module.GetPairMode())) 
+        {
+            TSPair = 0;
+            Module.SetPairMode(false);
+            AddStatus("Pairing beendet...");
+        }
+        
         
         int Diff = millis() - Module.GetLastContact();
         //Serial.printf("Sleepdiff: %d\n\r", Diff);
