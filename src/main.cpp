@@ -7,9 +7,6 @@
     #define BOARD_LED   8
     #define LED_ON      LOW
     #define LED_OFF     HIGH
-    #define BOARD_LED   8
-    #define LED_ON      LOW
-    #define LED_OFF     HIGH
 #endif
 
 #ifndef MODULE_C3 // wenn c3 dann kein MRD
@@ -272,20 +269,6 @@ void SendNameChange(int Pos)
 }
 #pragma endregion Send-Things
 #pragma region System-Things
-void SaveModule2()
-{
-    preferences.begin("JeepifyInit", false);
-      String ToSave = (String) Module.Export();
-
-      preferences.putString("Module", ToSave);
-      Serial.printf("Exportiere Modul: %s", ToSave.c_str());
-    preferences.begin("JeepifyInit", false);
-      String ToSave = (String) Module.Export();
-
-      preferences.putString("Module", ToSave);
-      Serial.printf("Exportiere Modul: %s", ToSave.c_str());
-  preferences.end();
-}
 void SetDemoMode(bool Mode) 
 {
     Module.SetDemoMode(Mode);
