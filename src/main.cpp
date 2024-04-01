@@ -1,10 +1,15 @@
 //#define KILL_NVS 1
 #pragma region Start-Things
-#define MODULE_C3
+//#define MODULE_C3
 
 #ifdef MODULE_C3  // BootButton
     #define BOOT_BUTTON 9 // ESP-C3 SuperMini
     #define BOARD_LED   8
+    #define LED_ON      LOW
+    #define LED_OFF     HIGH
+#else
+    #define BOOT_BUTTON 9 // ESP-C3 SuperMini
+    #define BOARD_LED   LED_BUILTIN
     #define LED_ON      LOW
     #define LED_OFF     HIGH
 #endif
@@ -27,10 +32,11 @@
 //#define MODULE_1S
 //#define MODULE_2S
 //#define MODULE_4A_1V_ADC
-#define MODULE_4A_1V_NOADC
+//#define MODULE_4A_1V_NOADC
 //#define MODULE_4S_1V_ADC
 //#define MODULE_4S_1V_NOADC
 //#define MODULE_2A_2S_1V_NOADC
+#define MODULE_4S_NO_PORT
 
 #pragma region Includes
 #include <Arduino.h>
@@ -64,7 +70,7 @@
 
 const char _Version[]           = "3.01";
 const char _Protokoll_Version[] = "1.01";
-const char _ModuleName[]        = "C3-Arma";
+const char _ModuleName[]        = "Sw_4";
 
 struct struct_Status {
   String    Msg;
@@ -88,8 +94,17 @@ volatile uint32_t TSTouch = 0;
 Preferences preferences;
 
 #pragma region Functions
+#ifdef ESP32 
+    void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len);
+#elif defined(ESP8266)
+    void OnDataRecv(uint8_t * mac, uint8_t *incomingData, uint8_t len);
+#endif
 void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len);
-void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status);
+#ifdef ESP32 
+    void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status); 
+#elif defined(ESP8266)
+    void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus);
+#endif
 
 void   InitModule();
 
@@ -121,11 +136,7 @@ void SendMessage ()
     TSLed = millis();
     digitalWrite(BOARD_LED, LED_ON);
     Serial.println("LED on");
-            
-    digitalWrite(BOARD_LED, LED_ON);
-    Serial.println("LED on");
-            
-
+  
     JsonDocument doc;; String jsondata; 
     char buf[100]; 
 
@@ -356,12 +367,14 @@ void  GoToSleep() {
   Serial.print("Going to sleep at: "); Serial.println(millis());
   Serial.print("LastContact    at: "); Serial.println(Module.GetLastContact());
   
+  digitalWrite(BOARD_LED, LED_OFF);
+
   //gpio_deep_sleep_hold_en();
   //gpio_deep_sleep_hold_en();
-  for (int SNr=0; SNr<MAX_PERIPHERALS; SNr++) if (Module.GetPeriphType(SNr) == SENS_TYPE_SWITCH) gpio_hold_en((gpio_num_t)Module.GetPeriphIOPort(SNr));  
+  //for (int SNr=0; SNr<MAX_PERIPHERALS; SNr++) if (Module.GetPeriphType(SNr) == SENS_TYPE_SWITCH) gpio_hold_en((gpio_num_t)Module.GetPeriphIOPort(SNr));  
   
-  esp_sleep_enable_timer_wakeup(SLEEP_INTERVAL * 1000);
-  esp_deep_sleep_start();
+  //esp_sleep_enable_timer_wakeup(SLEEP_INTERVAL * 1000);
+  //esp_deep_sleep_start();
 }
 void SaveModule()
 {
@@ -508,7 +521,7 @@ void OnDataRecvCommon(const uint8_t * mac, const uint8_t *incomingData, int len)
       { 
           Serial.println("in you are paired und node");
         
-          bool exists = esp_now_is_peer_exist(mac);
+          bool exists = esp_now_is_peer_exist((u8 *) mac);
           if (exists) 
           { 
             PrintMAC(mac); Serial.println(" already exists...");
@@ -620,9 +633,11 @@ void OnDataRecvCommon(const uint8_t * mac, const uint8_t *incomingData, int len)
       else if (doc["Order"] == "Reset")         
       { 
           AddStatus("Clear all"); 
-          nvs_flash_erase(); 
-          nvs_flash_init();
-          ESP.restart();
+          #ifdef ESP32
+              nvs_flash_erase(); 
+              nvs_flash_init();
+              ESP.restart();
+          #endif
       }
       else if (doc["Order"] == "Restart")       
       { 
@@ -683,12 +698,12 @@ void OnDataRecvCommon(const uint8_t * mac, const uint8_t *incomingData, int len)
 
 void setup()
 {
+    delay(5000);
     Serial.begin(115200);
 
+    //gpio_deep_sleep_hold_dis();
     pinMode(BOARD_LED, OUTPUT);
-    
-
-    pinMode(BOARD_LED, OUTPUT);
+    digitalWrite(BOARD_LED, LED_OFF);
     
     #ifndef MODULE_C3 //MRD
         mrd = new MultiResetDetector(MRD_TIMEOUT, MRD_ADDRESS);
@@ -698,7 +713,7 @@ void setup()
           digitalWrite(LED_BUILTIN, LED_ON);
           ClearPeers();
           SetSleepMode(false);
-          ReadyToPair = true; TSPair = millis();
+          Module.SetPairMode(true); TSPair = millis();
         }
         else {
           Serial.println("No Multi Reset Detected");
@@ -740,10 +755,12 @@ void setup()
     WiFi.macAddress(MacTemp);
     Module.SetBroadcastAddress(MacTemp);
 
-    //if (esp_now_init() != ESP_OK) { Serial.println("Error initializing ESP-NOW"); }
-    if (esp_now_init() != 0) { Serial.println("Error initializing ESP-NOW"); }
-    //if (esp_now_init() != ESP_OK) { Serial.println("Error initializing ESP-NOW"); }
-    if (esp_now_init() != 0) { Serial.println("Error initializing ESP-NOW"); }
+    #ifdef ESP32            //esp_now_init()
+        if (esp_now_init() != ESP_OK) { Serial.println("Error initializing ESP-NOW"); return; }
+    #elif defined(ESP8266)
+        if (esp_now_init() != 0)      { Serial.println("Error initializing ESP-NOW"); return; }
+        esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
+    #endif  // ESP32
   
     esp_now_register_send_cb(OnDataSent);
     esp_now_register_recv_cb(OnDataRecv);    
@@ -800,7 +817,7 @@ void loop()
         TSTouch = millis();
         
         int Diff = millis() - Module.GetLastContact();
-        //Serial.printf("Sleepdiff: %d\n\r", Diff);
+        
         if (Diff > SLEEP_INTERVAL) {
             if (Module.GetSleepMode()) {
                 Serial.print("Going to sleep at: "); Serial.println(millis());
@@ -828,7 +845,7 @@ void loop()
         }
         
         int BB = !digitalRead(BOOT_BUTTON);
-      
+        /* 8266 4-wa not
         if (BB == 1) {
             TSPair = millis();
             Module.SetPairMode(true);
@@ -849,6 +866,7 @@ void loop()
             }
         }
         else TSBootButton = 0;
+        */
     }
 }
 
@@ -917,7 +935,7 @@ void InitModule()
       //                      Name     Type             ADS  IO  NULL   VpA   Vin  PeerID
       Module.PeriphSetup(0, "Sensor_1", SENS_TYPE_AMP,  1,    1,   0,  0.066,  0,    0);
       Module.PeriphSetup(1, "Sensor_2", SENS_TYPE_AMP,  1,    2,   0,  0.066,  0,    0);
-      Module.PeriphSetup(2, "Sensor_3", SENS_TYPE_AMP,  1,    3,   0,  0.066,  0,    0);
+      Module.PeriphSe_ModuleNametup(2, "Sensor_3", SENS_TYPE_AMP,  1,    3,   0,  0.066,  0,    0);
       Module.PeriphSetup(3, "Sensor_4", SENS_TYPE_AMP,  1,    4,   0,  0.066,  0,    0);
       Module.PeriphSetup(4, "VMon",     SENS_TYPE_VOLT, 0,   39,   0,    0,   200,   0); 
     #endif
@@ -933,6 +951,16 @@ void InitModule()
       Module.PeriphSetup(2, "Amp 3",  SENS_TYPE_AMP,     0,  32,   0,    0,    0,    0);
       Module.PeriphSetup(3, "Amp 4",  SENS_TYPE_AMP,     0,  33,   0,    0,    0,    0);
       Module.PeriphSetup(4, "V-Sens", SENS_TYPE_VOLT,    0,  39,   0,    0,   200,   0); 
+    #endif
+    #ifdef MODULE_4S_NO_PORT   // 4-way Battery-Sensor no ADC and VMon ##############################################################
+      #define SWITCHES_PER_SCREEN 4
+      Module.Setup("SW_4", 4, _Version, NULL,     false, true,  false, false, -1,  RELAY_NORMAL, -1,  -1,     1);
+
+      //                      Name     Type             ADS  IO  NULL   VpA   Vin  PeerID
+      Module.PeriphSetup(0, "Rel_1", SENS_TYPE_SWITCH,  0,  04,   0,    0,    0,    0);
+      Module.PeriphSetup(1, "Rel_2", SENS_TYPE_SWITCH,  0,  14,   0,    0,    0,    0);
+      Module.PeriphSetup(2, "Rel_3", SENS_TYPE_SWITCH,  0,  12,   0,    0,    0,    0);
+      Module.PeriphSetup(3, "Rel_4", SENS_TYPE_SWITCH,  0,  13,   0,    0,    0,    0);
     #endif
     #ifdef MODULE_2A_2S_1V_NOADC   // 4-way Battery-Sensor no ADC and VMon ##############################################################
       #define SWITCHES_PER_SCREEN 2
