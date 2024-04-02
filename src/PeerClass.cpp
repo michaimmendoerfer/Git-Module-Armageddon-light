@@ -83,10 +83,18 @@ void  PeerClass::Setup(const char* Name, int Type, const char *Version, const ui
     _Type = Type;
     strcpy(_Version, Version);
     memcpy(_BroadcastAddress, BroadcastAddress, 6);
+    
+    Serial.printf("%d - PeerClass::Setup: Name=%s, Version=%s", _ClassId, _Name, _Version);
+
     _SleepMode = SleepMode;
     _DebugMode = DebugMode;
     _DemoMode  = DemoMode;
     _PairMode  = PairMode;
+    _VoltageMon     = -1;
+    _RelayType      =  1;
+    _ADCPort1       = -1;
+    _ADCPort2       = -1;
+    _VoltageDevider = -1;
     
     for (int Si=0; Si<MAX_PERIPHERALS; Si++) Periph[Si].SetPos(Si);
 }     
@@ -94,25 +102,13 @@ void  PeerClass::Setup(const char* Name, int Type, const char *Version, const ui
                     bool SleepMode, bool DebugMode, bool DemoMode, bool PairMode,
                     int VoltageMon, int RelayType, int ADCPort1, int ADCPort2, float VoltageDevider)
 {
-    strcpy(_Name, Name);
-    _Type = Type;
-    strcpy(_Version, Version);
-    if (BroadcastAddress) memcpy(_BroadcastAddress, BroadcastAddress, 6);
-    _SleepMode = SleepMode;
-    _DebugMode = DebugMode;
-    _DemoMode  = DemoMode;
-    _PairMode  = PairMode;
+    Setup(Name, Type, Version, BroadcastAddress, SleepMode, DebugMode, DemoMode, PairMode);
 
     _VoltageMon     = VoltageMon;
     _RelayType      = RelayType;
     _ADCPort1       = ADCPort1;
     _ADCPort2       = ADCPort2;
     _VoltageDevider = VoltageDevider;
-    
-    for (int Si=0; Si<MAX_PERIPHERALS; Si++) 
-    {
-        Periph[Si].SetPos(Si);
-    }
 }      
 char* PeerClass::Export() 
 {
@@ -131,12 +127,16 @@ char* PeerClass::Export()
 
         strcat(ExportImportBuffer, ReturnBufferPeriph);
     }
-
+    Serial.printf("%d - PeerClass:Export = %s\n\r", _ClassId, ExportImportBuffer);
     return ExportImportBuffer;
 }
-void PeerClass::Import(char *Buf) 
+void PeerClass::Import(const char *Buf) 
 {
-    strcpy(_Name, strtok(Buf, ";"));
+    strcpy(ExportImportBuffer, Buf);
+
+    Serial.printf("%d - PeerClass:Import = %s\n\r", _ClassId, ExportImportBuffer);
+
+    strcpy(_Name, strtok(ExportImportBuffer, ";"));
     _Type = atoi(strtok(NULL, ";"));
     
     _BroadcastAddress[0] = (byte) atoi(strtok(NULL, ";"));

@@ -103,7 +103,7 @@ class PeerClass
                     bool SleepMode, bool DebugMode, bool DemoMode, bool PairMode,
                     int VoltageMon, int RelayType, int ADCPort1, int ADCPort2, float VoltageDevider);
         char* Export();
-        void  Import(char *Buf);
+        void  Import(const char *Buf);
 
         void  SetName(const char *Name) { strcpy(_Name, Name); }
         char *GetName() { return (_Name); }
