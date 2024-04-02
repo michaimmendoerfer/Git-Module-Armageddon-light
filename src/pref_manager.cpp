@@ -137,14 +137,19 @@ int GetPeers()
     {
         sprintf(Buf, "Peer-%d", Pi);
         ImportStringPeer = preferences.getString(Buf, "");
-        strcpy(ScreenExportImportBuffer, ImportStringPeer.c_str());
-        Serial.printf("gelesen: [%s]: %s\n", Buf, ScreenExportImportBuffer);
 
-        P = new PeerClass();
-        P->Import(ScreenExportImportBuffer);
+        Serial.printf("gelesen: [%s]: %s\n", Buf, ImportStringPeer.c_str());
+
+        if (ImportStringPeer != "") 
+        {
+            strcpy(ScreenExportImportBuffer, ImportStringPeer.c_str());
+
+            P = new PeerClass();
+            P->Import(ScreenExportImportBuffer);
         
-        PeerList.add(P);
-        for (int Si=0; Si<MAX_PERIPHERALS; Si++) PeriphList.add(P->GetPeriphPtr(Si));
+            PeerList.add(P);
+            for (int Si=0; Si<MAX_PERIPHERALS; Si++) PeriphList.add(P->GetPeriphPtr(Si));
+        }
     }
   
     Serial.println("jetzt kommt Multi");
@@ -153,8 +158,8 @@ int GetPeers()
     {
         snprintf(Buf, sizeof(Buf), "Screen-%d", s);
         
-        ImportStringMulti = preferences.getString(Buf, "nix");
-        if (ImportStringMulti != "nix") 
+        ImportStringMulti = preferences.getString(Buf, "");
+        if (ImportStringMulti != "") 
         {   
             Serial.printf("%s - %d Bytes gelesen: %s\n\r", Buf, sizeof(ImportStringMulti), ImportStringMulti);
             strcpy(ScreenExportImportBuffer, ImportStringMulti.c_str());
