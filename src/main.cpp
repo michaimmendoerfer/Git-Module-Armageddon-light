@@ -119,7 +119,6 @@ void   SetDemoMode (bool Mode);
 void   SetSleepMode(bool Mode);
 void   SetDebugMode(bool Mode);
 void   SaveModule();
-void   SaveModule();
 
 void   AddStatus(String Msg);
 
@@ -289,12 +288,10 @@ void SetSleepMode(bool Mode)
 {
     Module.SetSleepMode(Mode);
     SaveModule();
-    SaveModule();
 }
 void SetDebugMode(bool Mode) 
 {
     Module.SetDebugMode(Mode);
-    SaveModule();
     SaveModule();
 }
 void AddStatus(String Msg) 
@@ -379,9 +376,9 @@ void  GoToSleep() {
 void SaveModule()
 {
       preferences.begin("JeepifyInit", false);
-          String ExportStringPeer = Module.Export();
+          String ExportStringPeer = String(Module.Export());
 
-          Serial.printf("putSring = %d", preferences.putString("Module", ExportStringPeer));
+          Serial.printf("putSring = %d", preferences.putString("Module", ExportStringPeer.c_str()));
           Serial.printf("schreibe: Module: %s",ExportStringPeer.c_str());
           Serial.println();
       preferences.end();
@@ -634,9 +631,11 @@ void OnDataRecvCommon(const uint8_t * mac, const uint8_t *incomingData, int len)
       { 
           AddStatus("Clear all"); 
           #ifdef ESP32
-              nvs_flash_erase(); 
-              nvs_flash_init();
-              ESP.restart();
+                nvs_flash_erase(); nvs_flash_init();
+          #elif defined(ESP8266)
+                preferences.begin("JeepifyInit", false);
+                preferences.clear();
+                preferences.end();
           #endif
       }
       else if (doc["Order"] == "Restart")       
@@ -712,7 +711,6 @@ void setup()
           Serial.println("Multi Reset Detected");
           digitalWrite(LED_BUILTIN, LED_ON);
           ClearPeers();
-          SetSleepMode(false);
           Module.SetPairMode(true); TSPair = millis();
         }
         else {
@@ -729,6 +727,16 @@ void setup()
     }
     #endif
 
+    #ifdef KILL_NVS
+       #ifdef ESP32
+            nvs_flash_erase(); nvs_flash_init();
+       #elif defined(ESP8266)
+            preferences.begin("JeepifyInit", false);
+            preferences.clear();
+            preferences.end();
+        #endif
+    #endif
+
     InitModule();
 
     /*for (int SNr=0; SNr<MAX_PERIPHERALS; SNr++)  
@@ -740,6 +748,7 @@ void setup()
         }
     }
   */
+
     if (preferences.begin("JeepifyInit", true))
     {
         String SavedModule   = preferences.getString("Module", "");
@@ -766,10 +775,6 @@ void setup()
     esp_now_register_recv_cb(OnDataRecv);    
 
     AddStatus("Init Module");
-    
-    #ifdef KILL_NVS
-      nvs_flash_erase(); nvs_flash_init(); ESP.restart();
-    #endif
 
     int PeerCount = GetPeers();  
     if (PeerCount == 0) 
