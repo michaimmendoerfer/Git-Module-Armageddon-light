@@ -940,7 +940,7 @@ void InitModule()
       //                      Name     Type             ADS  IO  NULL   VpA   Vin  PeerID
       Module.PeriphSetup(0, "Sensor_1", SENS_TYPE_AMP,  1,    1,   0,  0.066,  0,    0);
       Module.PeriphSetup(1, "Sensor_2", SENS_TYPE_AMP,  1,    2,   0,  0.066,  0,    0);
-      Module.PeriphSe_ModuleNametup(2, "Sensor_3", SENS_TYPE_AMP,  1,    3,   0,  0.066,  0,    0);
+      Module.PeriphSetup(2, "Sensor_3", SENS_TYPE_AMP,  1,    3,   0,  0.066,  0,    0);
       Module.PeriphSetup(3, "Sensor_4", SENS_TYPE_AMP,  1,    4,   0,  0.066,  0,    0);
       Module.PeriphSetup(4, "VMon",     SENS_TYPE_VOLT, 0,   39,   0,    0,   200,   0); 
     #endif
