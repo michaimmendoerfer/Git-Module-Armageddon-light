@@ -23,6 +23,8 @@
 #define SEND_CMD_UPDATE_NAME      40
 #define SEND_CMD_RESET            50
 #define SEND_CMD_RESTART          51
+#define SEND_CMD_PAIR_ME          60
+#define SEND_CMD_YOU_ARE_PAIRED   61
 
 
 #define MAX_PERIPHERALS 5

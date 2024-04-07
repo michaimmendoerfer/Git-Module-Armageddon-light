@@ -34,10 +34,9 @@ PeriphClass::PeriphClass()
     _OldValue = 0;
     _Changed = false;
     _PeerId = 0;
-    memset(_UId, 0, 7);
 }
 void  PeriphClass::Setup(const char* Name, int Type, bool isADS, int IOPort, 
-                         float Nullwert, float VperAmp, int Vin, int PeerId, uint8_t *UId)
+                         float Nullwert, float VperAmp, int Vin, int PeerId)
 {
     strcpy(_Name, Name);
     _Type = Type;
@@ -46,7 +45,6 @@ void  PeriphClass::Setup(const char* Name, int Type, bool isADS, int IOPort,
     _Nullwert = Nullwert;
     _VperAmp = VperAmp;
     _PeerId = PeerId;
-    memcpy(_UId, UId, 7);
 }
 bool PeriphClass::IsType(int Type)
 {
@@ -63,6 +61,7 @@ bool PeriphClass::IsType(int Type)
 #pragma region PeerClass::Declaration
 PeerClass::PeerClass()
 {
+    //Serial.println("PeerClass Constructor sttart");
     _Id = _ClassId;
     _ClassId++;
 
@@ -75,14 +74,16 @@ PeerClass::PeerClass()
     _Changed = false;
     _TSLastSeen = 0;
     memset(_BroadcastAddress, 0, 6);
+    //Serial.println("PeerClass Constructor beendet");
 }
 void  PeerClass::Setup(const char* Name, int Type, const char *Version, const uint8_t *BroadcastAddress, 
                        bool SleepMode, bool DebugMode, bool DemoMode, bool PairMode)
 {
+    //Serial.println("PeerClass Setup Start");
     strcpy(_Name, Name);
     _Type = Type;
     strcpy(_Version, Version);
-    memcpy(_BroadcastAddress, BroadcastAddress, 6);
+    if (BroadcastAddress) memcpy(_BroadcastAddress, BroadcastAddress, 6);
     
     Serial.printf("%d - PeerClass::Setup: Name=%s, Version=%s", _ClassId, _Name, _Version);
 
@@ -164,13 +165,7 @@ void PeerClass::Import(const char *Buf)
 void  PeerClass::PeriphSetup(int Pos, const char* Name, int Type, bool isADS, int IOPort, 
                              float Nullwert, float VperAmp, int Vin, int PeerId)
 {
-    uint8_t UId[7];
-    byte PosByte = Pos;
-
-    memcpy(UId, _BroadcastAddress, 6);
-    UId[6] = PosByte;
-
-    Periph[Pos].Setup(Name, Type, isADS, IOPort, Nullwert, VperAmp, Vin, PeerId, UId);
+    Periph[Pos].Setup(Name, Type, isADS, IOPort, Nullwert, VperAmp, Vin, PeerId);
 }
 int   PeerClass::GetPeriphId(char *Name)
 {

@@ -36,7 +36,7 @@
 //#define MODULE_4S_1V_ADC
 //#define MODULE_4S_1V_NOADC
 //#define MODULE_2A_2S_1V_NOADC
-#define MODULE_4S_NO_PORT
+#define MODULE_8266_4S_NO_PORT_NO_ADC
 
 #pragma region Includes
 #include <Arduino.h>
@@ -134,7 +134,7 @@ void SendMessage ()
     //sendet NAME0:Value0, NAME1:Value1... Status:(bitwise)int
     TSLed = millis();
     digitalWrite(BOARD_LED, LED_ON);
-    Serial.println("LED on");
+    //Serial.println("LED on");
   
     JsonDocument doc;; String jsondata; 
     char buf[100]; 
@@ -226,17 +226,14 @@ void SendPairingRequest()
   // sendet auf Broadcast: "addme", T0:Type, N0:Name, T1:Type, N1:Name...
   TSLed = millis();
   digitalWrite(BOARD_LED, LED_ON);
-  digitalWrite(BOARD_LED, LED_ON);
   
   JsonDocument doc;; String jsondata; 
   char Buf[100] = {};
-  char UIdStr[21];
-  uint8_t *BrTemp;
 
   doc["Node"]    = Module.GetName();   
   doc["Type"]    = Module.GetType();
   doc["Version"] = Module.GetVersion();
-  doc["Pairing"] = "add me";
+  doc["Order"]   = SEND_CMD_PAIR_ME;
   
   for (int SNr=0 ; SNr<MAX_PERIPHERALS; SNr++) {
     if (!Module.isPeriphEmpty(SNr)) {
@@ -256,11 +253,9 @@ void SendPairingRequest()
 void SendNameChange(int Pos)
 {
     // sendet auf Broadcast: "Order"="UpdateName"; "Pos"="32; "NewName"="Horst"; Pos==99 is ModuleName
-  
   TSLed = millis();
-  
   JsonDocument doc;; String jsondata; 
-  char Buf[100] = {};
+  
   
   doc["Node"]    = Module.GetName();   
   doc["Order"]   = "UpdateName";
@@ -376,9 +371,9 @@ void  GoToSleep() {
 void SaveModule()
 {
       preferences.begin("JeepifyInit", false);
-          String ExportStringPeer = String(Module.Export());
+          String ExportStringPeer = Module.Export();
 
-          Serial.printf("putSring = %d", preferences.putString("Module", ExportStringPeer.c_str()));
+          Serial.printf("putSring = %d", preferences.putString("Module", ExportStringPeer));
           Serial.printf("schreibe: Module: %s",ExportStringPeer.c_str());
           Serial.println();
       preferences.end();
@@ -499,182 +494,169 @@ float ReadVolt(int SNr)
 #pragma region ESP-Things
 void OnDataRecvCommon(const uint8_t * mac, const uint8_t *incomingData, int len) 
 {  
-  char* buff = (char*) incomingData;        //char buffer
-  JsonDocument doc;;
-  String jsondata;
-  
-  jsondata = String(buff);                  //converting into STRING
-  
-  Serial.print("Recieved from: "); PrintMAC(mac); 
-  
-  DeserializationError error = deserializeJson(doc, jsondata);
-  
-  if (!error) {
-      String TempName = doc["Node"];
-      Serial.print("("); Serial.print(TempName); Serial.print(") - ");
-      Serial.println(jsondata);    
-      
-      if ((doc["Pairing"] == "you are paired") and (doc["Peer"] == Module.GetName())) 
-      { 
-          Serial.println("in you are paired und node");
+    char* buff = (char*) incomingData;        //char buffer
+    JsonDocument doc;;
+    String jsondata;
+    int Pos = -1;
+    float NewVoltage = 0;
+
+    jsondata = String(buff);                  //converting into STRING
+    
+    Serial.print("Recieved from: "); PrintMAC(mac); 
+    
+    DeserializationError error = deserializeJson(doc, jsondata);
+    
+    if (!error) {
+        String TempName = doc["Node"];
+        Serial.print("("); Serial.print(TempName); Serial.print(") - ");
+        Serial.println(jsondata);    
         
-          bool exists = esp_now_is_peer_exist((u8 *) mac);
-          if (exists) 
-          { 
-            PrintMAC(mac); Serial.println(" already exists...");
-          }
-          else 
-          {
-            PeerClass *Peer = new PeerClass;
-                Peer->Setup(doc["Node"], (int) doc["Type"], "xxx", mac, false, false, false, false);
-                Peer->SetTSLastSeen(millis());
-                PeerList.add(Peer);
-
-                SavePeers();
-                RegisterPeers();
-                
-                if (Module.GetDebugMode()) {
-                  Serial.print("Name: "); Serial.print(Peer->GetName());
-                  Serial.print(" (");PrintMAC(Peer->GetBroadcastAddress()); Serial.println(")\n");
-                  Serial.print("Saving Peers after received new one...");
-                  ReportAll();
-                }
-                Module.SetPairMode(false);
+        if (((int)doc["Order"] == SEND_CMD_YOU_ARE_PAIRED) and (doc["Peer"] == Module.GetName())) 
+        { 
+            Serial.println("in you are paired und node");
+            
+            bool exists = esp_now_is_peer_exist((u8 *) mac);
+            if (exists) 
+            { 
+                PrintMAC(mac); Serial.println(" already exists...");
             }
-      }
-      if      (doc["Order"] == "stay alive")       
-      {   Module.SetLastContact(millis());
-          if (Module.GetDebugMode()) { Serial.print("LastContact: "); Serial.println(Module.GetLastContact()); }
-      }
-      else if (doc["Order"] == "SleepMode On")     
-      { 
-          AddStatus("Sleep: on");  
-          SetSleepMode(true);  
-          SendMessage(); 
-      }
-      else if (doc["Order"] == "SleepMode Off")    
-      { 
-          AddStatus("Sleep: off"); 
-          SetSleepMode(false); 
-          SendMessage(); 
-      }
-      else if (doc["Order"] == "SleepMode Toggle") 
-      { 
-          if (Module.GetSleepMode()) 
-          { 
-              AddStatus("Sleep: off");   
-              SetSleepMode(false); 
-              SendMessage(); 
-          }
-          else 
-          { 
-              AddStatus("Sleep: on");    
-              SetSleepMode(true);  
-              SendMessage(); 
-          }
-      } 
-      else if (doc["Order"] == "DebugMode on")     
-      { 
-          AddStatus("DebugMode: on");  
-          SetDebugMode(true);  
-          SendMessage(); 
-      }
-      else if (doc["Order"] == "DebugMode off")    
-      { 
-          AddStatus("DebugMode: off"); 
-          SetDebugMode(false); 
-          SendMessage(); 
-      }
-      else if (doc["Order"] == "DebugMode Toggle") 
-      { 
-          if (Module.GetDebugMode()) 
-          {   
-              AddStatus("DebugMode: off");   
-              SetDebugMode(false); 
-              SendMessage(); 
-          }
-          else 
-          { 
-              AddStatus("DebugMode: on");    
-              SetDebugMode(true);  
-              SendMessage(); 
-          }
-      }
-      else if (doc["Order"] == "DemoMode on")      
-      { 
-          AddStatus("Demo: on");   
-          SetDemoMode(true);   
-          SendMessage(); 
-      }
-      else if (doc["Order"] == "DemoMode off")     
-      { 
-          AddStatus("Demo: off");  
-          SetDemoMode(false);  
-          SendMessage(); 
-      }
-      else if (doc["Order"] == "DemoMode Toggle")  
-      { 
-          if (Module.GetDemoMode()) 
-          { 
-              AddStatus("DemoMode: off"); 
-              SetDemoMode(false); 
-              SendMessage(); 
-          }
-          else 
-          { 
-              AddStatus("DemoMode: on");  
-              SetDemoMode(true);  
-              SendMessage(); 
-          }
-      }
-      else if (doc["Order"] == "Reset")         
-      { 
-          AddStatus("Clear all"); 
-          #ifdef ESP32
-                nvs_flash_erase(); nvs_flash_init();
-          #elif defined(ESP8266)
-                preferences.begin("JeepifyInit", false);
-                preferences.clear();
-                preferences.end();
-          #endif
-      }
-      else if (doc["Order"] == "Restart")       
-      { 
-          ESP.restart(); 
-      }
-      else if (doc["Order"] == "Pair")          
-      {   
-          TSPair = millis(); 
-          Module.SetPairMode(true); 
-          AddStatus("Pairing beginnt"); 
-          SendMessage(); 
-          #ifdef DISPLAY_480
-            smartdisplay_led_set_rgb(1,0,0);
-          #endif
-      }
-      else if (doc["Order"] == "Eichen")        
-      {   
-          AddStatus("Eichen beginnt"); 
-          CurrentCalibration();
-      }
-      else if (doc["Order"] == "VoltCalib")     
-      { 
-          AddStatus("VoltCalib beginnt");
-          float NewVoltage = doc["NewVoltage"];
+            else 
+            {
+                PeerClass *Peer = new PeerClass;
+                    Peer->Setup(doc["Node"], (int) doc["Type"], "xxx", mac, false, false, false, false);
+                    Peer->SetTSLastSeen(millis());
+                    PeerList.add(Peer);
 
-          if (Module.GetVoltageMon() != -1)
-          {
-              VoltageCalibration(Module.GetVoltageMon(), NewVoltage) ;
-          }
-      }
-      else if (doc["Order"] == "ToggleSwitch")  
-      { 
-          int Pos = doc["Pos"];
-          if (Module.isPeriphEmpty(Pos) == false) ToggleSwitch(Pos);
-      }  
-      else if (doc["Order"] == "UpdateName")
-      {
-          int Pos = (int) doc["Pos"];
+                    SavePeers();
+                    RegisterPeers();
+                    
+                    if (Module.GetDebugMode()) {
+                    Serial.print("Name: "); Serial.print(Peer->GetName());
+                    Serial.print(" (");PrintMAC(Peer->GetBroadcastAddress()); Serial.println(")\n");
+                    Serial.print("Saving Peers after received new one...");
+                    ReportAll();
+                    }
+                    Module.SetPairMode(false);
+                }
+        }
+        
+        switch ((int) doc["Order"]) 
+        {
+            case SEND_CMD_STAY_ALIVE: 
+                Module.SetLastContact(millis());
+                if (Module.GetDebugMode()) { Serial.print("LastContact: "); Serial.println(Module.GetLastContact()); }
+                break;case SEND_CMD_SLEEPMODE_ON:
+                AddStatus("Sleep: on");  
+                SetSleepMode(true);  
+                SendMessage(); 
+                break;
+            case SEND_CMD_SLEEPMODE_OFF:
+                AddStatus("Sleep: off"); 
+                SetSleepMode(false); 
+                SendMessage(); 
+                break;
+            case SEND_CMD_SLEEPMODE_TOGGLE:
+                if (Module.GetSleepMode()) 
+                { 
+                    AddStatus("Sleep: off");   
+                    SetSleepMode(false); 
+                    SendMessage(); 
+                }
+                else 
+                { 
+                    AddStatus("Sleep: on");    
+                    SetSleepMode(true);  
+                    SendMessage(); 
+                }
+                break;
+            case SEND_CMD_DEBUGMODE_ON:
+                AddStatus("DebugMode: on");  
+                SetDebugMode(true);  
+                SendMessage(); 
+                break;
+            case SEND_CMD_DEBUGMODE_OFF:
+                AddStatus("DebugMode: off"); 
+                SetDebugMode(false); 
+                SendMessage(); 
+                break;
+            case SEND_CMD_DEBUGMODE_TOGGLE:
+                if (Module.GetDebugMode()) 
+                {   
+                    AddStatus("DebugMode: off");   
+                    SetDebugMode(false); 
+                    SendMessage(); 
+                }
+                else 
+                { 
+                    AddStatus("DebugMode: on");    
+                    SetDebugMode(true);  
+                    SendMessage(); 
+                }
+                break;
+            case SEND_CMD_DEMOMODE_ON:
+                AddStatus("Demo: on");   
+                SetDemoMode(true);   
+                SendMessage(); 
+                break;
+            case SEND_CMD_DEMOMODE_OFF:
+                AddStatus("Demo: off");  
+                SetDemoMode(false);  
+                SendMessage(); 
+                break;
+            case SEND_CMD_DEMOMODE_TOGGLE:
+                if (Module.GetDemoMode()) 
+                { 
+                    AddStatus("DemoMode: off"); 
+                    SetDemoMode(false); 
+                    SendMessage(); 
+                }
+                else 
+                { 
+                    AddStatus("DemoMode: on");  
+                    SetDemoMode(true);  
+                    SendMessage(); 
+                }
+                break;
+            case SEND_CMD_RESET:
+                AddStatus("Clear all"); 
+                #ifdef ESP32
+                    nvs_flash_erase(); nvs_flash_init();
+                #elif defined(ESP8266)
+                    preferences.begin("JeepifyInit", false);
+                    preferences.clear();
+                    preferences.end();
+                #endif
+                break;
+            case SEND_CMD_RESTART:
+                ESP.restart(); 
+                break;
+            case SEND_CMD_PAIRMODE_ON:
+                Module.SetPairMode(true);
+                AddStatus("Pairing beginnt"); 
+                SendMessage(); 
+                #ifdef DISPLAY_480
+                smartdisplay_led_set_rgb(1,0,0);
+                #endif
+                break;
+            case SEND_CMD_CURRENT_CALIB:
+                AddStatus("Eichen beginnt"); 
+                CurrentCalibration();
+                break;
+            case SEND_CMD_VOLTAGE_CALIB:
+                AddStatus("VoltCalib beginnt");
+                NewVoltage = doc["NewVoltage"];
+
+                if (Module.GetVoltageMon() != -1)
+                {
+                    VoltageCalibration(Module.GetVoltageMon(), NewVoltage) ;
+                }
+                break;
+            case SEND_CMD_SWITCH_TOGGLE:
+                Pos = doc["Pos"];
+                if (Module.isPeriphEmpty(Pos) == false) ToggleSwitch(Pos);
+                break;
+            case SEND_CMD_UPDATE_NAME:
+                Pos = (int) doc["Pos"];
                 String NewName = doc["NewName"];
 
                 if (NewName != "") 
@@ -684,8 +666,9 @@ void OnDataRecvCommon(const uint8_t * mac, const uint8_t *incomingData, int len)
                 }
                 
                 SaveModule();
-		            SendNameChange(Pos);
-      }
+                SendNameChange(Pos);
+                break;
+        }
     } // end (!error)
     else // error
     { 
@@ -703,6 +686,7 @@ void setup()
     //gpio_deep_sleep_hold_dis();
     pinMode(BOARD_LED, OUTPUT);
     digitalWrite(BOARD_LED, LED_OFF);
+    
     
     #ifndef MODULE_C3 //MRD
         mrd = new MultiResetDetector(MRD_TIMEOUT, MRD_ADDRESS);
@@ -736,10 +720,12 @@ void setup()
             preferences.end();
         #endif
     #endif
-
+    
+    //Serial.println("vor Init");
     InitModule();
+    //Serial.println("nach Init");
 
-    /*for (int SNr=0; SNr<MAX_PERIPHERALS; SNr++)  
+    for (int SNr=0; SNr<MAX_PERIPHERALS; SNr++)  
     { 
         switch (Module.GetPeriphType(SNr)) {
             case SENS_TYPE_SWITCH: pinMode(Module.GetPeriphIOPort(SNr), OUTPUT); break;
@@ -747,7 +733,6 @@ void setup()
             case SENS_TYPE_AMP:    pinMode(Module.GetPeriphIOPort(SNr), INPUT ); break;
         }
     }
-  */
 
     if (preferences.begin("JeepifyInit", true))
     {
@@ -812,7 +797,7 @@ void setup()
 
     gpio_deep_sleep_hold_dis(); 
   */
-    //UpdateSwitches();
+    UpdateSwitches();
 }
 
 void loop()
@@ -832,7 +817,7 @@ void loop()
         }
         if ((TSTouch - TSLed > MSGLIGHT_INTERVAL) and (TSLed > 0))
         {
-            Serial.println("LED off");
+            //Serial.println("LED off");
             TSLed = 0;
             digitalWrite(BOARD_LED, LED_OFF);
         }
@@ -849,8 +834,8 @@ void loop()
             AddStatus("Pairing beendet...");
         }
         
+        #ifdef ESP32
         int BB = !digitalRead(BOOT_BUTTON);
-        /* 8266 4-wa not
         if (BB == 1) {
             TSPair = millis();
             Module.SetPairMode(true);
@@ -871,7 +856,7 @@ void loop()
             }
         }
         else TSBootButton = 0;
-        */
+        #endif
     }
 }
 
@@ -957,15 +942,16 @@ void InitModule()
       Module.PeriphSetup(3, "Amp 4",  SENS_TYPE_AMP,     0,  33,   0,    0,    0,    0);
       Module.PeriphSetup(4, "V-Sens", SENS_TYPE_VOLT,    0,  39,   0,    0,   200,   0); 
     #endif
-    #ifdef MODULE_4S_NO_PORT   // 4-way Battery-Sensor no ADC and VMon ##############################################################
+    #ifdef MODULE_8266_4S_NO_PORT_NO_ADC   // 4-way Battery-Sensor no ADC and VMon ##############################################################
       #define SWITCHES_PER_SCREEN 4
-      Module.Setup("SW_4", 4, _Version, NULL,     false, true,  false, false, -1,  RELAY_NORMAL, -1,  -1,     1);
-
-      //                      Name     Type             ADS  IO  NULL   VpA   Vin  PeerID
-      Module.PeriphSetup(0, "Rel_1", SENS_TYPE_SWITCH,  0,  04,   0,    0,    0,    0);
-      Module.PeriphSetup(1, "Rel_2", SENS_TYPE_SWITCH,  0,  14,   0,    0,    0,    0);
-      Module.PeriphSetup(2, "Rel_3", SENS_TYPE_SWITCH,  0,  12,   0,    0,    0,    0);
-      Module.PeriphSetup(3, "Rel_4", SENS_TYPE_SWITCH,  0,  13,   0,    0,    0,    0);
+       Serial.println("vor Module.Setup");
+      Module.Setup(_ModuleName, SWITCH_4_WAY, _Version, NULL,     false, true,  false, false, -1,  RELAY_NORMAL, -1,  -1,     1);
+        Serial.println("nach Module.Setup");
+      //                      Name     Type             ADS     IO  NULL   VpA   Vin  PeerID
+      Module.PeriphSetup(0, "Rel_1", SENS_TYPE_SWITCH,  false,  04,   0,    0,    0,    0);
+      Module.PeriphSetup(1, "Rel_2", SENS_TYPE_SWITCH,  false,  14,   0,    0,    0,    0);
+      Module.PeriphSetup(2, "Rel_3", SENS_TYPE_SWITCH,  false,  12,   0,    0,    0,    0);
+      Module.PeriphSetup(3, "Rel_4", SENS_TYPE_SWITCH,  false,  13,   0,    0,    0,    0);
     #endif
     #ifdef MODULE_2A_2S_1V_NOADC   // 4-way Battery-Sensor no ADC and VMon ##############################################################
       #define SWITCHES_PER_SCREEN 2
