@@ -70,7 +70,7 @@
 
 const char _Version[]           = "3.11";
 const char _Protokoll_Version[] = "1.01";
-const char _ModuleName[]        = "Combo_4";
+const char _ModuleName[]        = "Sw_4";
 
 struct struct_Status {
   String    Msg;
