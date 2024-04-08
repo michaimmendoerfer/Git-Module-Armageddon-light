@@ -70,7 +70,7 @@
 
 const char _Version[]           = "3.11";
 const char _Protokoll_Version[] = "1.01";
-const char _ModuleName[]        = "Sw_4";
+const char _ModuleName[]        = "Combo_4";
 
 struct struct_Status {
   String    Msg;
@@ -325,11 +325,11 @@ void UpdateSwitches()
               if (Value == 0) Value = 1;
               else Value = 0;
           }
-          /*if (Value == 1) digitalWrite(Module.GetPeriphIOPort(SNr), HIGH);
+          if (Value == 1) digitalWrite(Module.GetPeriphIOPort(SNr), HIGH);
           else digitalWrite(Module.GetPeriphIOPort(SNr), LOW);
           
           Serial.print(Value); Serial.println(" geschrieben");
-          */
+          
       }
   }
   SendMessage();

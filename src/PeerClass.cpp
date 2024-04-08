@@ -262,7 +262,7 @@ PeerClass *FindNextPeer(PeerClass *P, int Type, bool circular)
 // returns next Peer, tries PeerList.size() times, otherwise returns NULL
 {
     PeerClass *Peer;
-    int ActualPeerIndex;
+    int ActualPeerIndex = 0;
 
     //Get PeerIndex in List
     for(int i = 0; i < PeerList.size(); i++) 
@@ -290,7 +290,7 @@ PeerClass *FindPrevPeer(PeerClass *P, int Type, bool circular)
 // returns previous Peer, tries PeerList.size() times, otherwise returns NULL
 {
     PeerClass *Peer;
-    int ActualPeerIndex;
+    int ActualPeerIndex = 0;
 
     //Get PeerIndex in List
     for(int i = 0; i < PeerList.size(); i++) 

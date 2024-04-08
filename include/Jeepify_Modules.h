@@ -1,7 +1,7 @@
 #ifndef JEEPIFY_MODULES_H
 #define JEEPIFY_MODULES_H
 #endif
-
+/*
 const int SWITCHES_PER_SCREEN = 4;
 
 void InitModule(int ModuleType)
@@ -13,7 +13,7 @@ void InitModule(int ModuleType)
     SPI-Flash:        6,7,8,9,10,11 (don´t use)
     ADC2 (when Wifi): 32,33,34,35,36,39
 
-    */
+    
     //uint8_t MacUId[7];
     switch (ModuleType)
     {
@@ -153,4 +153,4 @@ void InitModule(int ModuleType)
         }
     }
 }
-
+*/
