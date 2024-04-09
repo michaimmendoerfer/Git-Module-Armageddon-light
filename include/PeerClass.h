@@ -62,6 +62,8 @@ class PeriphClass {
         int   GetPeerId() { return _PeerId; }
         void  SetPeerId(int PeerId) { _PeerId = PeerId; }
         bool  IsSensor() { return ((_Type == SENS_TYPE_VOLT) or (_Type == SENS_TYPE_AMP)); }
+        bool  IsVoltSensor() { return (_Type == SENS_TYPE_VOLT); }
+        bool  IsAmpSensor()  { return (_Type == SENS_TYPE_AMP); }
         bool  IsSwitch() { return ( _Type == SENS_TYPE_SWITCH) ; }
         bool  isEmpty() { return (_Type == 0); }
         
@@ -182,9 +184,10 @@ class PeerClass
         int   GetPeriphIOPort(int P) { return Periph[P].GetIOPort(); }
 
         float GetPeriphNullwert(int P) { return Periph[P].GetNullwert(); }
-        float GetPeriphNullwert(char *Name);
+        //float GetPeriphNullwert(char *Name);
+        
         void  SetPeriphNullwert(int P, float Nullwert) { Periph[P].SetNullwert(Nullwert); }
-        void  SetPeriphNullwert(char *Name, float Nullwert);
+        //void  SetPeriphNullwert(char *Name, float Nullwert);
 
         PeriphClass *GetPeriphPtr(int P) { return &Periph[P]; }
         PeriphClass *GetPeriphPtr(char *Name);
@@ -192,6 +195,8 @@ class PeerClass
         bool isEmpty() { return (_Type == 0); }
         bool isPeriphEmpty(int SNr) { return Periph[SNr].isEmpty(); }
         bool isPeriphSensor(int SNr) { return Periph[SNr].IsSensor(); }
+        bool isPeriphVoltSensor(int SNr) { return Periph[SNr].IsVoltSensor(); }
+        bool isPeriphAmpSensor(int SNr)  { return Periph[SNr].IsAmpSensor(); }
         bool isPeriphSwitch(int SNr) { return Periph[SNr].IsSwitch(); }
 };
 
@@ -199,24 +204,22 @@ PeerClass *FindPeerByMAC(const uint8_t *BroadcastAddress);
 PeerClass *FindPeerById(int Id);
 PeerClass *FindPeerByName(char *Name);
 
-PeerClass *FindFirstPeer(int Type);
-PeerClass *FindNextPeer(PeerClass *P, int Type, bool circular);
-PeerClass *FindPrevPeer(PeerClass *P, int Type, bool circular);
+PeerClass *FindFirstPeer(int Type);                                                         // returns first Peer with Type, otherwise NULL
+PeerClass *FindNextPeer(PeerClass *P, int Type, bool circular);                             // returns next  Peer,     tries PeerList.size() times, otherwise returns NULL
+PeerClass *FindPrevPeer(PeerClass *P, int Type, bool circular);                             // returns prev  Peer,     tries PeerList.size() times, otherwise returns NULL
 PeriphClass *FindPeriphById(int Id);
-PeriphClass *FindFirstPeriph(PeerClass *P, int Type);
-PeriphClass *FindLastPeriph (PeerClass *P, int Type);
-PeriphClass *FindPrevPeriph(PeerClass *P, PeriphClass *Periph, int Type, bool circular);
-PeriphClass *FindNextPeriph(PeerClass *P, PeriphClass *Periph, int Type, bool circular);
+PeriphClass *FindFirstPeriph(PeerClass *P, int Type);                                       // return first Periph of Type. If Peer=NULL Peer is ignored
+PeriphClass *FindLastPeriph (PeerClass *P, int Type);                                       // return last  Periph of Type. If Peer=NULL Peer is ignored
+PeriphClass *FindNextPeriph(PeerClass *P, PeriphClass *Periph, int Type, bool circular);    // return next  Periph of Type. If Peer=NULL Peer is ignored, otherwise NULL, circular...
+PeriphClass *FindPrevPeriph(PeerClass *P, PeriphClass *Periph, int Type, bool circular);    // return prev  Periph of Type. If Peer=NULL Peer is ignored, otherwise NULL, circular...
 
-extern LinkedList<PeerClass*>   PeerList;
-extern LinkedList<PeriphClass*> PeriphList;
+extern LinkedList<PeerClass*>   PeerList;   // can hold all Peers,   has to be filled manually
+extern LinkedList<PeriphClass*> PeriphList; // can hold all Periphs, has to be filled manually
 
 char *TypeInText(int Type);
+
 extern PeerClass *ActivePeer;
 extern PeriphClass *ActivePeriph;
 
 extern char ExportImportBuffer[300];
-
-char *TypeInText(int Type);
-
 #endif
