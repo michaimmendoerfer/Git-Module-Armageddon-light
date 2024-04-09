@@ -41,7 +41,7 @@ MultiMonitorClass::MultiMonitorClass()
     _Used = false;
 }
 char* MultiMonitorClass::Export() 
-// fills ScreenExportImportBuffer with "Name;PeriphId0;PeriphId1;PeriphId2;PeriphId3"
+// fills ScreenExportImportBuffer with "ScreenName;PeriphId0;PeriphId1;PeriphId2;PeriphId3"
 {
     char ReturnBufferScreen[50];
 
@@ -56,7 +56,7 @@ char* MultiMonitorClass::Export()
     return ScreenExportImportBuffer;
 }
 void MultiMonitorClass::Import(char *Buf) 
-// import from Buf with "Name;PeriphId0;PeriphId1;PeriphId2;PeriphId3"
+// import from Buf with "ScreenName;PeriphId0;PeriphId1;PeriphId2;PeriphId3"
 {
     strcpy(_Name, strtok(Buf, ";"));
     

@@ -79,13 +79,12 @@ PeerClass::PeerClass()
 void  PeerClass::Setup(const char* Name, int Type, const char *Version, const uint8_t *BroadcastAddress, 
                        bool SleepMode, bool DebugMode, bool DemoMode, bool PairMode)
 {
-    //Serial.println("PeerClass Setup Start");
     strcpy(_Name, Name);
     _Type = Type;
     strcpy(_Version, Version);
     if (BroadcastAddress) memcpy(_BroadcastAddress, BroadcastAddress, 6);
     
-    Serial.printf("%d - PeerClass::Setup: Name=%s, Version=%s", _ClassId, _Name, _Version);
+    //Serial.printf("%d - PeerClass::Setup: Name=%s, Version=%s", _ClassId, _Name, _Version);
 
     _SleepMode = SleepMode;
     _DebugMode = DebugMode;
