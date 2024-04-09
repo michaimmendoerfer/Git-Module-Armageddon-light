@@ -79,6 +79,7 @@ void MultiMonitorClass::Import(char *Buf)
 
 }
 #pragma endregion MultiMonitorClass
+#pragma region Peer-Things
 void SavePeers() 
 // writes [Peer-0] - [Name;Type;BroadcastAddress[0-5];SleepMode;DebugMode;DemoMode;Periph0Name;Periph0Type;Periph0Pos;Periph0PeerId...]
 {
@@ -313,3 +314,4 @@ void ReportAll()
       }
     }
 }
+#pragma endregion Peer-Things
