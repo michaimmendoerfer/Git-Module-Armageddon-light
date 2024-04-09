@@ -3,21 +3,19 @@
 
 //#define MODULE_C3
 
-// BootButton und LED
+// BootButton und LED wenn C3-Mini
 #ifdef MODULE_C3  
     #define BOOT_BUTTON 9 // ESP-C3 SuperMini
     #define BOARD_LED   8
     #define LED_ON      LOW
     #define LED_OFF     HIGH
 #else
-    #define BOOT_BUTTON 9 // ??????????????????????????????
+// MRD  und LED_BUILTIN wenn kein C3-Mini
+    //#define BOOT_BUTTON 9 // ??????????????????????????????
     #define BOARD_LED   LED_BUILTIN
     #define LED_ON      LOW
     #define LED_OFF     HIGH
-#endif
 
-// MRD wenn kein C3-Mini
-#ifndef MODULE_C3 // wenn c3 dann kein MRD
     #ifdef ESP8266 // ESP8266_MRD_USE_RTC false
       #define ESP8266_MRD_USE_RTC   false  
     #endif
@@ -39,7 +37,7 @@
 //#define MODULE_4S_1V_ADC
 //#define MODULE_4S_1V_NOADC
 //#define MODULE_2A_2S_1V_NOADC
-#define MODULE_8266_4S_NO_PORT_NO_ADC
+#define MODULE_8266_4S_NO_PORT_NO_ADC_NO_DISP
 
 #pragma region Includes
 #include <Arduino.h>
@@ -901,7 +899,7 @@ void InitModule()
       Module.PeriphSetup(3, "Load",   SENS_TYPE_SWITCH,  0,  33,   0,    0,    0,    0);
       Module.PeriphSetup(4, "Lipo",   SENS_TYPE_VOLT,    0,  39,   0,    0,   200,   0); 
     #endif
-    #ifdef MODULE_1S            // 1-Way Switch ######################################################################################
+    #ifdef MODULE_32_1S_NO_ADC_NO_PORT_NO_DISPL            // 1-Way Switch ######################################################################################
       #define SWITCHES_PER_SCREEN 1
       //                Name        Type       Version  Address   sleep  debug  demo   pair  vMon RelayType      adc1 adc2 voltagedevier 
       Module.Setup(_ModuleName, SWITCH_1_WAY, _Version, NULL,     false, true,  false, false, -1, RELAY_REVERSED, -1,  -1,     1);
@@ -909,7 +907,7 @@ void InitModule()
       //                      Name     Type             ADS    IO  NULL   VpA   Vin  PeerID
       Module.PeriphSetup(0, "Switch_1", SENS_TYPE_SWITCH,  0,  25,   0,    0,    0,    0);
     #endif
-    #ifdef MODULE_2S            // 2-Way Switch ######################################################################################
+    #ifdef MODULE_32_2S_NO_ADC_NO_PORT_NO_DISPL            // 2-Way Switch ######################################################################################
       #define SWITCHES_PER_SCREEN 2
 
       //                Name        Type       Version  Address   sleep  debug  demo   pair  vMon RelayType      adc1 adc2 voltagedevier 
@@ -919,9 +917,8 @@ void InitModule()
       Module.PeriphSetup(0, "Switch_1", SENS_TYPE_SWITCH,  0,  25,   0,    0,    0,    0);
       Module.PeriphSetup(0, "Switch_2", SENS_TYPE_SWITCH,  0,  26,   0,    0,    0,    0);
     #endif
-    #ifdef MODULE_4A_1V_ADC     // 4-way Battery-Sensor with ADC and VMon ############################################################
+    #ifdef MODULE_32_4A_1V_ADC_NO_PORT_NO_DISPL     // 4-way Battery-Sensor with ADC and VMon ############################################################
       #define SWITCHES_PER_SCREEN 4
-      
       //                Name        Type         Version  Address   sleep  debug  demo  pair  vMon RelayType    adc1 adc2 voltagedevier 
       Module.Setup(_ModuleName, BATTERY_SENSOR, _Version, NULL,     false, true,  true, false, 1,  RELAY_NORMAL, 14,  15,     1);
 
@@ -932,7 +929,7 @@ void InitModule()
       Module.PeriphSetup(3, "Sensor_4", SENS_TYPE_AMP,  1,    4,   0,  0.066,  0,    0);
       Module.PeriphSetup(4, "VMon",     SENS_TYPE_VOLT, 0,   39,   0,    0,   200,   0); 
     #endif
-    #ifdef MODULE_4A_1V_NOADC   // 4-way Battery-Sensor no ADC and VMon ##############################################################
+    #ifdef MODULE_32_4A_1V_NO_PORT_NO_ADC_NO_DISPL   // 4-way Battery-Sensor no ADC and VMon ##############################################################
       #define SWITCHES_PER_SCREEN 4
 
       //                Name        Type         Version  Address   sleep  debug  demo  pair  vMon RelayType    adc1 adc2 voltagedevier 
@@ -945,20 +942,8 @@ void InitModule()
       Module.PeriphSetup(3, "Amp 4",  SENS_TYPE_AMP,     0,  33,   0,    0,    0,    0);
       Module.PeriphSetup(4, "V-Sens", SENS_TYPE_VOLT,    0,  39,   0,    0,   200,   0); 
     #endif
-    #ifdef MODULE_8266_4S_NO_PORT_NO_ADC   // 4-way Battery-Sensor no ADC and VMon ##############################################################
-      #define SWITCHES_PER_SCREEN 4
-       Serial.println("vor Module.Setup");
-      Module.Setup(_ModuleName, SWITCH_4_WAY, _Version, NULL,     false, true,  false, false, -1,  RELAY_NORMAL, -1,  -1,     1);
-        Serial.println("nach Module.Setup");
-      //                      Name     Type             ADS     IO  NULL   VpA   Vin  PeerID
-      Module.PeriphSetup(0, "Rel_1", SENS_TYPE_SWITCH,  false,  04,   0,    0,    0,    0);
-      Module.PeriphSetup(1, "Rel_2", SENS_TYPE_SWITCH,  false,  14,   0,    0,    0,    0);
-      Module.PeriphSetup(2, "Rel_3", SENS_TYPE_SWITCH,  false,  12,   0,    0,    0,    0);
-      Module.PeriphSetup(3, "Rel_4", SENS_TYPE_SWITCH,  false,  13,   0,    0,    0,    0);
-    #endif
-    #ifdef MODULE_2A_2S_1V_NOADC   // 4-way Battery-Sensor no ADC and VMon ##############################################################
+    #ifdef MODULE_32_2S_2A_1V_NO_PORT_NO_ADC_NO_DISPL  // ESP32: 2-way Battery-Sensor, 2 Switches, VMon, no ADC, no Port ##############################################################
       #define SWITCHES_PER_SCREEN 2
-
       //                Name        Type         Version  Address   sleep  debug  demo  pair  vMon RelayType    adc1 adc2 voltagedevier 
       Module.Setup(_ModuleName, PDC_SENSOR_MIX, _Version, NULL,     false, true,  true, false, 1,  RELAY_NORMAL, -1,  -1,     1.5);
 
@@ -968,6 +953,16 @@ void InitModule()
       Module.PeriphSetup(2, "Sw 1",   SENS_TYPE_SWITCH,  0,  32,   0,    0,    0,    0);
       Module.PeriphSetup(3, "Sw 2 ",  SENS_TYPE_SWITCH,  0,  33,   0,    0,    0,    0);
       Module.PeriphSetup(4, "V-Sens", SENS_TYPE_VOLT,    0,  39,   0,    0,   200,   0); 
+    #endif
+
+    #ifdef MODULE_8266_4S_NO_PORT_NO_ADC_NO_DISPL   // 8266: 4-way Battery-Sensor no ADC and VMon ##############################################################
+        #define SWITCHES_PER_SCREEN 4
+        Module.Setup(_ModuleName, SWITCH_4_WAY, _Version, NULL,     false, true,  false, false, -1,  RELAY_NORMAL, -1,  -1,     1);
+        //                      Name     Type             ADS     IO  NULL   VpA   Vin  PeerID
+        Module.PeriphSetup(0, "Rel_1", SENS_TYPE_SWITCH,  false,  04,   0,    0,    0,    0);
+        Module.PeriphSetup(1, "Rel_2", SENS_TYPE_SWITCH,  false,  14,   0,    0,    0,    0);
+        Module.PeriphSetup(2, "Rel_3", SENS_TYPE_SWITCH,  false,  12,   0,    0,    0,    0);
+        Module.PeriphSetup(3, "Rel_4", SENS_TYPE_SWITCH,  false,  13,   0,    0,    0,    0);
     #endif
 
     for (int SNr=0; SNr<MAX_PERIPHERALS; SNr++)
