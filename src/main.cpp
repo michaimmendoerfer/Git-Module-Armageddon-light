@@ -1,19 +1,22 @@
 //#define KILL_NVS 1
 #pragma region Start-Things
+
 //#define MODULE_C3
 
-#ifdef MODULE_C3  // BootButton
+// BootButton und LED
+#ifdef MODULE_C3  
     #define BOOT_BUTTON 9 // ESP-C3 SuperMini
     #define BOARD_LED   8
     #define LED_ON      LOW
     #define LED_OFF     HIGH
 #else
-    #define BOOT_BUTTON 9 // ESP-C3 SuperMini
+    #define BOOT_BUTTON 9 // ??????????????????????????????
     #define BOARD_LED   LED_BUILTIN
     #define LED_ON      LOW
     #define LED_OFF     HIGH
 #endif
 
+// MRD wenn kein C3-Mini
 #ifndef MODULE_C3 // wenn c3 dann kein MRD
     #ifdef ESP8266 // ESP8266_MRD_USE_RTC false
       #define ESP8266_MRD_USE_RTC   false  

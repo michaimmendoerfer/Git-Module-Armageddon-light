@@ -207,6 +207,7 @@ PeerClass *FindPeerByName(char *Name);
 PeerClass *FindFirstPeer(int Type);                                                         // returns first Peer with Type, otherwise NULL
 PeerClass *FindNextPeer(PeerClass *P, int Type, bool circular);                             // returns next  Peer,     tries PeerList.size() times, otherwise returns NULL
 PeerClass *FindPrevPeer(PeerClass *P, int Type, bool circular);                             // returns prev  Peer,     tries PeerList.size() times, otherwise returns NULL
+
 PeriphClass *FindPeriphById(int Id);
 PeriphClass *FindFirstPeriph(PeerClass *P, int Type);                                       // return first Periph of Type. If Peer=NULL Peer is ignored
 PeriphClass *FindLastPeriph (PeerClass *P, int Type);                                       // return last  Periph of Type. If Peer=NULL Peer is ignored
