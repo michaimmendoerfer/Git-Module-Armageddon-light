@@ -688,7 +688,6 @@ void setup()
     pinMode(BOARD_LED, OUTPUT);
     digitalWrite(BOARD_LED, LED_OFF);
     
-    
     #ifndef MODULE_C3 //MRD
         mrd = new MultiResetDetector(MRD_TIMEOUT, MRD_ADDRESS);
 
@@ -869,9 +868,8 @@ void InitModule()
     possible Outputs: 4,13,16,17,18,19,21,22,23,25,26,27,32,33
     SPI-Flash:        6,7,8,9,10,11 (don´t use)
     ADC2 (when Wifi): 32,33,34,35,36,39
-
     */
-    //uint8_t MacUId[7];
+
     // not tested
     #ifdef MODULE_32_1S_1V_NO_ADC_NO_PORT_NO_DISPL   
       #define SWITCHES_PER_SCREEN 4
